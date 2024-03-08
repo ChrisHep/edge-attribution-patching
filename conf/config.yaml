@@ -1,0 +1,60 @@
+wandb_mode: disabled
+device: cuda
+debug_run: true
+position_fewshot: true
+counterfactual: false # counterfactual result --> always change the result and the below param.
+counterfactual_symbol_result: false # symbol or number
+consistent_counterfactual: false # word or arabic
+counterfactual_symbol_operands: false # run create_dataset.py
+extended_templates: true # evaluates to further_templates
+reversed_fewshot: false # reverse the fewshot example
+
+transformers_cache_dir: null
+
+model: EleutherAI/pythia-12b-deduped-v0 #persimmon # mistralai/Mixtral-8x7B-v0.1 # bigscience/bloomz-7b1 # Qwen/Qwen-14B # EleutherAI/gpt-neox-20b #EleutherAI/pythia-12b-deduped-v0 #facebook/opt-13b #EleutherAI/gpt-j-6b
+model_ckpt: null
+random_weights: false
+int8: false
+output_dir: ./out
+data_dir: /shared-network/shared/2024_ml_master/data
+path_to_entity_dict: ./interventions/entity_dict.json
+lama_path: /path/to/lama/weights
+
+intervention_type: 1
+get_full_distribution: false
+intervention_loc: layer # mixed or double_mixed or all or single_layer_ or layer or attention_layer_output or attention_head_output or attention_head
+effect_type: indirect
+template_type: all
+representation: words #words or arabic
+max_n: 20
+examples_per_template: 30
+n_operands: 3
+n_shots: 1
+max_n_vars: null
+all_tokens: true
+
+seed: 0
+
+defaults:
+  - _self_
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+# nohup python -u math_cma.py > logs/intervention_1_shots_max_20_arabic_layer_position_fewshot_commented.log &
+# screen -S run
+# ./run_experiments.sh
+# CTRL + A + D
+# screen -r run
+
+
+# intervention_loc:
+#   - attention_layer_output: override all attention heads in each layer
+#   - attention_head_output: override all attention heads in each layer
+
+# kill process: ps -ef | grep math_cma.py 
+# kill -9 PID

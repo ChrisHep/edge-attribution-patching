@@ -12,7 +12,7 @@ from tqdm import tqdm
 from transformer_lens import HookedTransformer
 from transformer_lens.hook_points import HookPoint
 
-from eap.eap_graph import EAPGraph
+from eapp.eap_graph import EAPGraph
 
 def EAP_corrupted_forward_hook(
     activations: Union[Float[Tensor, "batch_size seq_len n_heads d_model"], Float[Tensor, "batch_size seq_len d_model"]],

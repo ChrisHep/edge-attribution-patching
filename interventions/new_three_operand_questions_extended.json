@@ -1,0 +1,1 @@
+{"({x}+{y}+{z})": "{x} + {y} + {z} =","({x}+{y} + {z})": "The result of {x} + {y} + {z} =", "({x} -{y}-{z})": "The result of {x} minus {y} minus {z} is", "({x}*{y} * {z})": "The result of {x} * {y} * {z} =", "({x} * {y} * {z})": "The result of {x} times {y} times {z} =", "({x}*{y}*{z})": "{x} * {y} * {z} =", "(({x}-{y})*{z})": "The result of ( {x} - {y} ) * {z} ="}
