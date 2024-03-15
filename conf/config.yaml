@@ -11,7 +11,7 @@ reversed_fewshot: false # reverse the fewshot example
 
 transformers_cache_dir: null
 
-model: EleutherAI/pythia-12b-deduped-v0 #persimmon # mistralai/Mixtral-8x7B-v0.1 # bigscience/bloomz-7b1 # Qwen/Qwen-14B # EleutherAI/gpt-neox-20b #EleutherAI/pythia-12b-deduped-v0 #facebook/opt-13b #EleutherAI/gpt-j-6b
+model: EleutherAI/gpt-neo-125m #persimmon # mistralai/Mixtral-8x7B-v0.1 # bigscience/bloomz-7b1 # Qwen/Qwen-14B # EleutherAI/gpt-neox-20b #EleutherAI/pythia-12b-deduped-v0 #facebook/opt-13b #EleutherAI/gpt-j-6b
 model_ckpt: null
 random_weights: false
 int8: false
@@ -25,7 +25,7 @@ get_full_distribution: false
 intervention_loc: layer # mixed or double_mixed or all or single_layer_ or layer or attention_layer_output or attention_head_output or attention_head
 effect_type: indirect
 template_type: all
-representation: words #words or arabic
+representation: arabic #words or arabic
 max_n: 20
 examples_per_template: 30
 n_operands: 3
