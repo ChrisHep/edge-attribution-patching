@@ -13,6 +13,7 @@ from transformer_lens import HookedTransformer
 from transformer_lens.hook_points import HookPoint
 
 from eapp.eap_graph import EAPGraph
+import sys
 
 def EAP_corrupted_forward_hook(
     activations: Union[Float[Tensor, "batch_size seq_len n_heads d_model"], Float[Tensor, "batch_size seq_len d_model"]],
@@ -20,6 +21,8 @@ def EAP_corrupted_forward_hook(
     upstream_activations_difference: Float[Tensor, "batch_size seq_len n_upstream_nodes d_model"], 
     graph: EAPGraph
 ):
+    upstream_activations_difference = upstream_activations_difference.to(activations.device)
+    #upstream_activations_difference = upstream_activations_difference[:, 7, :, :]
     hook_slice = graph.get_hook_slice(hook.name)
     if activations.ndim == 3:
         # We are in the case of a residual layer or MLP
@@ -38,10 +41,12 @@ def EAP_clean_forward_hook(
     upstream_activations_difference: Float[Tensor, "batch_size seq_len n_upstream_nodes d_model"], 
     graph: EAPGraph
 ):
+    upstream_activations_difference = upstream_activations_difference.to(activations.device)
     hook_slice = graph.get_hook_slice(hook.name)
     if activations.ndim == 3:
         upstream_activations_difference[:, :, hook_slice, :] += activations.unsqueeze(-2)
     elif activations.ndim == 4:
+        upstream_activations_difference = upstream_activations_difference.to(activations.device)
         upstream_activations_difference[:, :, hook_slice, :] += activations
 
 def EAP_clean_backward_hook(
@@ -50,6 +55,7 @@ def EAP_clean_backward_hook(
     upstream_activations_difference: Float[Tensor, "batch_size seq_len n_upstream_nodes d_model"],
     graph: EAPGraph
 ):
+    upstream_activations_difference = upstream_activations_difference.to(grad.device)
     hook_slice = graph.get_hook_slice(hook.name)
 
     # we get the slice of all upstream nodes that come before this downstream node
@@ -67,6 +73,7 @@ def EAP_clean_backward_hook(
         upstream_activations_difference[:, :, earlier_upstream_nodes_slice],
         grad_expanded.transpose(-1, -2)
     ).sum(dim=0).sum(dim=0) # we sum over the batch_size and seq_len dimensions
+    graph.eap_scores = graph.eap_scores.to(result.device)
 
     graph.eap_scores[earlier_upstream_nodes_slice, hook_slice] += result 
 
@@ -76,6 +83,7 @@ def EAP_downstream_patching_hook(
     upstream_activations_difference: Float[Tensor, "batch_size seq_len n_upstream_nodes d_model"],
     graph: EAPGraph,
 ) -> Union[Float[Tensor, "batch_size seq_len n_heads d_model"], Float[Tensor, "batch_size seq_len d_model"]]:
+    upstream_activations_difference = upstream_activations_difference.to(activations.device)
     hook_slice = graph.downstream_hook_slice[hook.name]
 
     earlier_upstream_nodes_slice = graph.get_slice_previous_upstream_nodes(hook)
@@ -109,6 +117,8 @@ def EAP(
     upstream_nodes: List[str]=None,
     downstream_nodes: List[str]=None,
     batch_size: int=1,
+    alt_attention_mask: Int[Tensor, "batch_size seq_len"]=None,
+    base_attention_mask: Int[Tensor, "batch_size seq_len"]=None,
 ):
 
     graph = EAPGraph(model.cfg, upstream_nodes, downstream_nodes)
@@ -157,7 +167,8 @@ def EAP(
         # we'll take the gradients when we perform the forward pass on the clean input
         with torch.no_grad(): 
             corrupted_tokens = corrupted_tokens.to(model.cfg.device)
-            model(corrupted_tokens[idx:idx+batch_size], return_type=None)        
+            base_attention_mask = base_attention_mask.to(model.cfg.device)
+            model(corrupted_tokens[idx:idx+batch_size], return_type=None, attention_mask=base_attention_mask[idx:idx+batch_size])        
 
         # now we perform a forward and backward pass on the clean input
         model.reset_hooks()
@@ -165,7 +176,8 @@ def EAP(
         model.add_hook(downstream_hook_filter, clean_downstream_hook_fn, "bwd")
 
         clean_tokens = clean_tokens.to(model.cfg.device)
-        value = metric(model(clean_tokens[idx:idx+batch_size], return_type="logits"))
+        alt_attention_mask = alt_attention_mask.to(model.cfg.device)
+        value = metric(model(clean_tokens[idx:idx+batch_size], return_type="logits", attention_mask=alt_attention_mask[idx:idx+batch_size]))
         value.backward()
         
         # We delete the activation differences tensor to free up memory

@@ -16,20 +16,7 @@ class InterventionDataset:
                  intervention_list,
                  device,
                  tokenizer: AutoTokenizer):
-        """
-        Args:
-            data (Union[pd.DataFrame, str]): The data to be used for the dataset. If a string is passed, it is assumed to be a path to a csv file.
-            tokenizer (AutoTokenizer): The tokenizer to be used for the dataset.
-            max_length (int, optional): The maximum length of the input sequence. Defaults to 512.
-            label_column (str, optional): The column in the dataframe that contains the labels. Defaults to 'label'.
-            text_column (str, optional): The column in the dataframe that contains the text. Defaults to 'text'.
-            intervention_column (Optional[str], optional): The column in the dataframe that contains the interventions. If None, interventions will be generated. Defaults to None.
-            interventions (Optional[List[interventions.Intervention]], optional): A list of interventions to be used. If None, interventions will be generated. Defaults to None.
-            intervention_prob (float, optional): The probability of applying an intervention. Defaults to 0.5.
-            intervention_max (int, optional): The maximum number of interventions to apply. Defaults to 3.
-            intervention_min (int, optional): The minimum number of interventions to apply. Defaults to 1.
-            intervention_seed (int, optional): The seed to be used for generating interventions. Defaults to 42.
-        """
+    
         self.intervention_list = intervention_list
         self.tokenizer = tokenizer
         self.device = device
@@ -47,12 +34,78 @@ class InterventionDataset:
     def __iter__(self):
         return iter(self.intervention_list)
     
+    # def create_intervention_dataset(self):
+    #     for intervention in self.intervention_list:
+    #         self.base_string_toks.append(intervention.base_string_tok.to(self.device))
+    #         self.alt_string_toks.append(intervention.alt_string_tok.to(self.device))
+    #         self.res_base_toks.append(intervention.res_base_tok[0])
+    #         self.pred_res_alt_toks.append(intervention.pred_res_alt_tok[0])
+    
+
+    def group_tensors_by_length(self, base_string_toks):
+        # Dictionary to hold grouped tensors by their length
+        grouped_tensors_by_length = {}
+        # Keep track of the original indices for reordering
+        reorder_indices = []
+
+        for i, tensor in enumerate(base_string_toks):
+            length = tensor.size(1)  # Get the length of the tensor (second dimension)
+            if length not in grouped_tensors_by_length:
+                grouped_tensors_by_length[length] = []
+            grouped_tensors_by_length[length].append(tensor)
+            reorder_indices.append((length, len(grouped_tensors_by_length[length]) - 1, i))
+
+        # Sort reorder_indices by length and then by their order of appearance
+        reorder_indices.sort(key=lambda x: (x[0], x[1]))
+        # Extract the final order of indices to match the grouped order
+        final_order_indices = [index for _, _, index in reorder_indices]
+
+        # Convert the dictionary to a list of groups
+        grouped_tensors = [group for _, group in sorted(grouped_tensors_by_length.items())]
+
+        return grouped_tensors, final_order_indices
+
+    
+    def reorder_list_according_to_indices(self, original_list, indices):
+        return [original_list[i] for i in indices]
+    
+    # def create_intervention_dataset(self):
+    #     for intervention in self.intervention_list:
+    #         self.base_string_toks.append(intervention.base_string_tok.to(self.device))
+    #         self.alt_string_toks.append(intervention.alt_string_tok.to(self.device))
+    #         self.res_base_toks.append(intervention.res_base_tok[0])
+    #         self.pred_res_alt_toks.append(intervention.pred_res_alt_tok[0])
+
+    #     # Group and reorder base string tokens
+    #     self.base_string_toks, base_order_indices = self.group_tensors_by_length(self.base_string_toks)
+    #     self.alt_string_toks, _ = self.group_tensors_by_length(self.alt_string_toks)
+
+    #     # Reorder res_base_toks and pred_res_alt_toks according to the order of base_string_toks
+    #     self.res_base_toks = self.reorder_list_according_to_indices(self.res_base_toks, base_order_indices)
+    #     self.pred_res_alt_toks = self.reorder_list_according_to_indices(self.pred_res_alt_toks, base_order_indices)
+
+    # padding based solution
     def create_intervention_dataset(self):
         for intervention in self.intervention_list:
-            self.base_string_toks.append(intervention.base_string_tok.to(self.device))
-            self.alt_string_toks.append(intervention.alt_string_tok.to(self.device))
+            self.base_string_toks.append(intervention.base_string_tok.T.flip([0]))#.to(self.device))
+            self.alt_string_toks.append(intervention.alt_string_tok.T)#.to(self.device))
             self.res_base_toks.append(intervention.res_base_tok[0])
             self.pred_res_alt_toks.append(intervention.pred_res_alt_tok[0])
+        self.base_string_toks = t.nn.utils.rnn.pad_sequence([i for i in self.base_string_toks], batch_first = True, padding_value=0).flip(dims=[1])
+        self.base_string_toks = t.squeeze(self.base_string_toks, dim=-1)
+        self.alt_string_toks = t.nn.utils.rnn.pad_sequence([i for i in self.alt_string_toks], batch_first = True, padding_value=0).flip(dims=[1])
+        self.alt_string_toks = t.squeeze(self.alt_string_toks, dim=-1)
 
-        self.base_string_toks = t.vstack(self.base_string_toks)
-        self.alt_string_toks = t.vstack(self.alt_string_toks)
+        self.base_attention_mask = (self.base_string_toks != 0).long()#.to("cuda")
+        self.alt_attention_mask = (self.alt_string_toks != 0).long()#.to("cuda")
+
+    def shuffle(self):
+        t.manual_seed(0)
+        indices = t.randperm(len(self.base_string_toks))
+        self.base_string_toks = self.base_string_toks[indices]
+        self.alt_string_toks = self.alt_string_toks[indices]
+        self.res_base_toks = [self.res_base_toks[i] for i in indices]
+        self.pred_res_alt_toks = [self.pred_res_alt_toks[i] for i in indices]
+        self.base_attention_mask = self.base_attention_mask[indices]
+        self.alt_attention_mask = self.alt_attention_mask[indices]
+        

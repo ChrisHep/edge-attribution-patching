@@ -395,6 +395,7 @@ class EAPGraph:
             )
 
         save_path = os.path.join(DEFAULT_GRAPH_PLOT_DIR, fname)
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         print(f"Saving graph")
         if not fname.endswith(".gv"): # turn the .gv file into a .png file

@@ -1,6 +1,6 @@
 wandb_mode: disabled
 device: cuda
-debug_run: true
+debug_run: false
 position_fewshot: true
 counterfactual: false # counterfactual result --> always change the result and the below param.
 counterfactual_symbol_result: false # symbol or number
@@ -11,7 +11,7 @@ reversed_fewshot: false # reverse the fewshot example
 
 transformers_cache_dir: null
 
-model: EleutherAI/gpt-neo-125m #persimmon # mistralai/Mixtral-8x7B-v0.1 # bigscience/bloomz-7b1 # Qwen/Qwen-14B # EleutherAI/gpt-neox-20b #EleutherAI/pythia-12b-deduped-v0 #facebook/opt-13b #EleutherAI/gpt-j-6b
+model: EleutherAI/pythia-12b-deduped-v0 # EleutherAI/gpt-neo-125m #persimmon # mistralai/Mixtral-8x7B-v0.1 # bigscience/bloomz-7b1 # Qwen/Qwen-14B # EleutherAI/gpt-neox-20b #EleutherAI/pythia-12b-deduped-v0 #facebook/opt-13b #EleutherAI/gpt-j-6b
 model_ckpt: null
 random_weights: false
 int8: false
