@@ -22,7 +22,6 @@ def EAP_corrupted_forward_hook(
     graph: EAPGraph
 ):
     upstream_activations_difference = upstream_activations_difference.to(activations.device)
-    #upstream_activations_difference = upstream_activations_difference[:, 7, :, :]
     hook_slice = graph.get_hook_slice(hook.name)
     if activations.ndim == 3:
         # We are in the case of a residual layer or MLP
@@ -33,7 +32,7 @@ def EAP_corrupted_forward_hook(
     elif activations.ndim == 4:
         # We are in the case of an attention layer
         # Activations have shape [batch_size, seq_len, n_heads, d_model]
-        upstream_activations_difference[:, :, hook_slice, :] = -activations
+        upstream_activations_difference[:, :, hook_slice, :] = -activations # corrupted - clean
 
 def EAP_clean_forward_hook(
     activations: Union[Float[Tensor, "batch_size seq_len n_heads d_model"], Float[Tensor, "batch_size seq_len d_model"]],
@@ -73,6 +72,15 @@ def EAP_clean_backward_hook(
         upstream_activations_difference[:, :, earlier_upstream_nodes_slice],
         grad_expanded.transpose(-1, -2)
     ).sum(dim=0).sum(dim=0) # we sum over the batch_size and seq_len dimensions
+    # print(f"result shape: {result.shape}")
+    # result_over_positions = torch.matmul(
+    #     upstream_activations_difference[:, :, earlier_upstream_nodes_slice],
+    #     grad_expanded.transpose(-1, -2)
+    # ).sum(dim=0)
+    # print(f"result_over_positions shape: {result_over_positions.shape}")
+    # print(f"earlier_upstream_nodes_slice shape: {earlier_upstream_nodes_slice}")
+    # print(f"hook_slice shape: {hook_slice}")
+    # print("++++++++++++++++++++++++++++++++++++++")
     graph.eap_scores = graph.eap_scores.to(result.device)
 
     graph.eap_scores[earlier_upstream_nodes_slice, hook_slice] += result 

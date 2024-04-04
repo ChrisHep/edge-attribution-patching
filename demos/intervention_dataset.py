@@ -24,22 +24,19 @@ class InterventionDataset:
         self.alt_string_toks = []
         self.res_base_toks = []
         self.pred_res_alt_toks = []
+        self.result_position = []
 
     def __len__(self):
         return len(self.intervention_list)
     
     def __getitem__(self, idx):
-        return (self.base_string_toks[idx], self.alt_string_toks[idx], self.res_base_toks[idx], self.pred_res_alt_toks[idx])
+        return (self.base_string_toks[idx], self.alt_string_toks[idx], 
+                self.res_base_toks[idx], self.pred_res_alt_toks[idx],
+                self.result_position[idx])
     
     def __iter__(self):
         return iter(self.intervention_list)
-    
-    # def create_intervention_dataset(self):
-    #     for intervention in self.intervention_list:
-    #         self.base_string_toks.append(intervention.base_string_tok.to(self.device))
-    #         self.alt_string_toks.append(intervention.alt_string_tok.to(self.device))
-    #         self.res_base_toks.append(intervention.res_base_tok[0])
-    #         self.pred_res_alt_toks.append(intervention.pred_res_alt_tok[0])
+
     
 
     def group_tensors_by_length(self, base_string_toks):
@@ -69,35 +66,26 @@ class InterventionDataset:
     def reorder_list_according_to_indices(self, original_list, indices):
         return [original_list[i] for i in indices]
     
-    # def create_intervention_dataset(self):
-    #     for intervention in self.intervention_list:
-    #         self.base_string_toks.append(intervention.base_string_tok.to(self.device))
-    #         self.alt_string_toks.append(intervention.alt_string_tok.to(self.device))
-    #         self.res_base_toks.append(intervention.res_base_tok[0])
-    #         self.pred_res_alt_toks.append(intervention.pred_res_alt_tok[0])
-
-    #     # Group and reorder base string tokens
-    #     self.base_string_toks, base_order_indices = self.group_tensors_by_length(self.base_string_toks)
-    #     self.alt_string_toks, _ = self.group_tensors_by_length(self.alt_string_toks)
-
-    #     # Reorder res_base_toks and pred_res_alt_toks according to the order of base_string_toks
-    #     self.res_base_toks = self.reorder_list_according_to_indices(self.res_base_toks, base_order_indices)
-    #     self.pred_res_alt_toks = self.reorder_list_according_to_indices(self.pred_res_alt_toks, base_order_indices)
-
     # padding based solution
     def create_intervention_dataset(self):
         for intervention in self.intervention_list:
-            self.base_string_toks.append(intervention.base_string_tok.T.flip([0]))#.to(self.device))
-            self.alt_string_toks.append(intervention.alt_string_tok.T)#.to(self.device))
+            self.base_string_toks.append(intervention.base_string_tok.T.flip([0]))
+            self.alt_string_toks.append(intervention.alt_string_tok.T)
             self.res_base_toks.append(intervention.res_base_tok[0])
             self.pred_res_alt_toks.append(intervention.pred_res_alt_tok[0])
+            if len(intervention.base_string_tok_list) == 14:
+                self.result_position.append(16)
+            elif len(intervention.base_string_tok_list) == 20:
+                self.result_position.append(14)
+            else:
+                self.result_position.append(11)
         self.base_string_toks = t.nn.utils.rnn.pad_sequence([i for i in self.base_string_toks], batch_first = True, padding_value=0).flip(dims=[1])
         self.base_string_toks = t.squeeze(self.base_string_toks, dim=-1)
         self.alt_string_toks = t.nn.utils.rnn.pad_sequence([i for i in self.alt_string_toks], batch_first = True, padding_value=0).flip(dims=[1])
         self.alt_string_toks = t.squeeze(self.alt_string_toks, dim=-1)
 
-        self.base_attention_mask = (self.base_string_toks != 0).long()#.to("cuda")
-        self.alt_attention_mask = (self.alt_string_toks != 0).long()#.to("cuda")
+        self.base_attention_mask = (self.base_string_toks != 0).long()
+        self.alt_attention_mask = (self.alt_string_toks != 0).long()
 
     def shuffle(self):
         t.manual_seed(0)
@@ -108,4 +96,5 @@ class InterventionDataset:
         self.pred_res_alt_toks = [self.pred_res_alt_toks[i] for i in indices]
         self.base_attention_mask = self.base_attention_mask[indices]
         self.alt_attention_mask = self.alt_attention_mask[indices]
+        self.result_position = [self.result_position[i] for i in indices]
         

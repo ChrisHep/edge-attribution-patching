@@ -8,6 +8,7 @@ from functools import partial
 
 from jaxtyping import Float
 from typing import Dict
+import sys
 
 DEFAULT_GRAPH_PLOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ims")
 
@@ -309,14 +310,16 @@ class EAPGraph:
 
     def show(
         self,
+        n,
         threshold=None,
         abs_scores=True,
-        fname: str="eap_graph.png"
+        fname: str="eap_graph"
     ):
         import pygraphviz as pgv
 
         minimum_penwidth = 0.2
-        edges = self.top_edges(threshold=threshold, abs_scores=abs_scores)
+        edges = self.top_edges(threshold=threshold, abs_scores=abs_scores, n=n)
+        k = n
 
         g = pgv.AGraph(
             name='root',
@@ -394,10 +397,10 @@ class EAPGraph:
                 minlen='0.5',
             )
 
-        save_path = os.path.join(DEFAULT_GRAPH_PLOT_DIR, fname)
+        save_path = os.path.join(DEFAULT_GRAPH_PLOT_DIR, fname + "_top" + str(k) + ".png")
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-        print(f"Saving graph")
+        print(f"Saving graph to {save_path}")
         if not fname.endswith(".gv"): # turn the .gv file into a .png file
             g.draw(path=save_path, prog='dot')
 

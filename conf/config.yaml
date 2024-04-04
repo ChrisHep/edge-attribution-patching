@@ -9,6 +9,11 @@ counterfactual_symbol_operands: false # run create_dataset.py
 extended_templates: true # evaluates to further_templates
 reversed_fewshot: false # reverse the fewshot example
 
+acdc_data: true
+k_edges: 200
+normalized_metric: true
+threshold: .01
+
 transformers_cache_dir: null
 
 model: EleutherAI/pythia-12b-deduped-v0 # EleutherAI/gpt-neo-125m #persimmon # mistralai/Mixtral-8x7B-v0.1 # bigscience/bloomz-7b1 # Qwen/Qwen-14B # EleutherAI/gpt-neox-20b #EleutherAI/pythia-12b-deduped-v0 #facebook/opt-13b #EleutherAI/gpt-j-6b
@@ -45,7 +50,7 @@ hydra:
   run:
     dir: .
 
-# nohup python -u math_cma.py > logs/intervention_1_shots_max_20_arabic_layer_position_fewshot_commented.log &
+# nohup python -u run_position_eap.py > logs/pythia_200edges.log &
 # screen -S run
 # ./run_experiments.sh
 # CTRL + A + D
